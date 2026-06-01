@@ -1,28 +1,20 @@
 import api from './api';
 
+// esto sirve para obtener los prodcutos del restaurante.
 export const getProducts = async () => {
-  const response = await api.get('/products');
+  const response = await api.get('/products/');
   return response.data;
 };
 
 export const createProduct = async (productData) => {
-
-    //Como enviamos una imagen (File), usamos FormData en vez de un JSON normal.
-   // El backend en Python debe estar preparado para recibir 'multipart/form-data'.
-   // en pocas palabras no sean unos wuachines y proyecten a deployar :)
-  const formData = new FormData();
-  formData.append('name', productData.name);
-  formData.append('price', productData.price);
-  if (productData.imageFile) {
-    formData.append('image', productData.imageFile);
-  } else {
-    formData.append('emoji', productData.emoji);
-  }
-
-  const response = await api.post('/products', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+  
+  const response = await api.post('/products/', {
+    nombre: productData.nombre,
+    precio: productData.precio,
+    descripcion: productData.descripcion || '',
+    stock: productData.stock || 0,
+    imagen_url: productData.imagen_url || '',
+    disponible: productData.disponible ?? true,
   });
   return response.data;
 };
