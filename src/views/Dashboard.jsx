@@ -24,32 +24,35 @@ export default function Dashboard() {
     }
   }, [isDark]);
 
-  function addProduct({ url, emoji, name, price }) {
-    setProducts((prev) => [{ id: Date.now(), url, emoji, name, price }, ...prev]);
+  // Modificado para recibir el objeto completo con la estructura de la BD
+  function addProduct(nuevoProducto) {
+    setProducts((prev) => [{ id_producto: Date.now(), ...nuevoProducto }, ...prev]);
   }
 
-  // 1. Aceptar cambia el paso de 0 a 1
-  function acceptOrder(id) {
+  // 1. Aceptar cambia el paso de 0 a 1 (ahora usa id_pedido y estado)
+  function acceptOrder(id_pedido) {
     setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, step: 1 } : o))
+      prev.map((o) => (o.id_pedido === id_pedido ? { ...o, estado: 1 } : o))
     );
   }
 
   // 2. Rechazar elimina el pedido de la vista actual
-  function rejectOrder(id) {
-    setOrders((prev) => prev.filter((o) => o.id !== id));
+  function rejectOrder(id_pedido) {
+    setOrders((prev) => prev.filter((o) => o.id_pedido !== id_pedido));
   }
 
   // 3. Avanzar mueve los pedidos desde el paso 1 al 4
-  function advanceOrder(id) {
+  function advanceOrder(id_pedido) {
     setOrders((prev) =>
-      prev.map((o) => (o.id === id && o.step > 0 && o.step < 4 ? { ...o, step: o.step + 1 } : o))
+      prev.map((o) => (o.id_pedido === id_pedido && o.estado > 0 && o.estado < 4 ? { ...o, estado: o.estado + 1 } : o))
     );
   }
 
   return (
+    // Agregamos dark:bg-gray-900 al fondo global
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-0 sm:py-6 transition-colors duration-300">
       
+      {/* Agregamos dark:bg-gray-800 y dark:text-white al panel central */}
       <div className="w-full max-w-sm bg-white dark:bg-gray-800 dark:text-gray-100 min-h-screen sm:min-h-0 sm:rounded-3xl sm:shadow-xl overflow-hidden flex flex-col transition-colors duration-300">
         
         {!isOpen && (
@@ -57,7 +60,8 @@ export default function Dashboard() {
             ⚠ Comercio cerrado — los clientes no pueden ver tu tienda
           </div>
         )}
-
+        
+        {/* Header actualizado con el botón de Tema */}
         <header className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10 transition-colors duration-300">
           <div className="flex items-center gap-2">
             <div>
@@ -67,6 +71,7 @@ export default function Dashboard() {
               <span className="text-xs text-gray-400 ml-1.5">· panel</span>
             </div>
             
+            {/* Botón Luna/Sol */}
             <button 
               onClick={() => setIsDark(!isDark)}
               className="ml-2 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-300"
