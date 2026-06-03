@@ -1,28 +1,21 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+// Usamos ../ para salir de la carpeta views y buscar en data/components
+import { INITIAL_ORDERS, INITIAL_PRODUCTS } from "../data/mockData";
 import StoreToggle from "../components/StoreToggle";
-import OrdersView from "./OrderView.jsx";
-import ProductsView from "./ProductsView.jsx";
-import { getProducts, createProduct } from "../services/productService";
-import { getOrders, updateOrderStatus } from "../services/orderService";
+// Estos quedan con ./ porque ya estamos adentro de views junto a ellos
+import OrdersView from "./OrdersView";
+import ProductsView from "./ProductsView";
 
-export default function Dashboard() { //Esto sirve para mostrar el dashboard del comercio, 
-  const navigate = useNavigate();    //con sus respectivos pedidos y productos.
+export default function Dashboard() {
   const [isOpen, setIsOpen] = useState(true);
   const [tab, setTab] = useState("orders");
-  const [orders, setOrders] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [isDark, setIsDark] = useState(true);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [loadingOrders, setLoadingOrders] = useState(false);
-
-  const usuario = JSON.parse(sessionStorage.getItem("usuario") || "null");
-
+  const [orders, setOrders] = useState(INITIAL_ORDERS);
+  const [products, setProducts] = useState(INITIAL_PRODUCTS);
   
-  useEffect(() => {
-    if (!usuario) navigate("/");
-  }, []);
+  // 1. Estado para el modo oscuro
+  const [isDark, setIsDark] = useState(true);
 
+  // 2. Efecto para aplicar la clase 'dark' al HTML
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add("dark");
@@ -31,64 +24,34 @@ export default function Dashboard() { //Esto sirve para mostrar el dashboard del
     }
   }, [isDark]);
 
-  // Carga pedidos, lo mismo que productos pero con pedidos. FIN :D
-  useEffect(() => {
-    if (!usuario) return;
-    setLoadingOrders(true);
-    getOrders()
-      .then((data) => setOrders(data))
-      .catch((err) => console.error("Error cargando pedidos:", err))
-      .finally(() => setLoadingOrders(false));
-  }, []);
-
-  // esta funcion carga los productos
-  // El backend sabe de qué restaurante por el token.
-  useEffect(() => {
-    if (!usuario) return;
-    setLoadingProducts(true);
-    getProducts()
-      .then((data) => setProducts(data))
-      .catch((err) => console.error("Error cargando productos:", err))
-      .finally(() => setLoadingProducts(false));
-  }, []);
-
-  async function addProduct(nuevoProducto) {
-    try {
-      const creado = await createProduct(nuevoProducto);
-      setProducts((prev) => [creado, ...prev]);
-    } catch (err) {
-      console.error("Error creando producto:", err);
-    }
+  function addProduct({ url, emoji, name, price }) {
+    setProducts((prev) => [{ id: Date.now(), url, emoji, name, price }, ...prev]);
   }
 
-  async function acceptOrder(id_pedido) {
+  // 1. Aceptar cambia el paso de 0 a 1
+  function acceptOrder(id) {
     setOrders((prev) =>
-      prev.map((o) => (o.id_pedido === id_pedido ? { ...o, estado: 1 } : o))
+      prev.map((o) => (o.id === id ? { ...o, step: 1 } : o))
     );
-    await updateOrderStatus(id_pedido, 1).catch(console.error);
   }
 
-  function rejectOrder(id_pedido) {
-    setOrders((prev) => prev.filter((o) => o.id_pedido !== id_pedido));
+  // 2. Rechazar elimina el pedido de la vista actual
+  function rejectOrder(id) {
+    setOrders((prev) => prev.filter((o) => o.id !== id));
   }
 
-  async function advanceOrder(id_pedido) {
+  // 3. Avanzar mueve los pedidos desde el paso 1 al 4
+  function advanceOrder(id) {
     setOrders((prev) =>
-      prev.map((o) => {
-        if (o.id_pedido === id_pedido && o.estado > 0 && o.estado < 4) {
-          const nuevoEstado = o.estado + 1;
-          updateOrderStatus(id_pedido, nuevoEstado).catch(console.error);
-          return { ...o, estado: nuevoEstado };
-        }
-        return o;
-      })
+      prev.map((o) => (o.id === id && o.step > 0 && o.step < 4 ? { ...o, step: o.step + 1 } : o))
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-start justify-center py-0 sm:py-6 transition-colors duration-300">
+      
       <div className="w-full max-w-sm bg-white dark:bg-gray-800 dark:text-gray-100 min-h-screen sm:min-h-0 sm:rounded-3xl sm:shadow-xl overflow-hidden flex flex-col transition-colors duration-300">
-
+        
         {!isOpen && (
           <div className="bg-red-50 dark:bg-red-900/30 border-b border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-medium text-center py-2 px-4">
             ⚠ Comercio cerrado — los clientes no pueden ver tu tienda
@@ -101,17 +64,18 @@ export default function Dashboard() { //Esto sirve para mostrar el dashboard del
               <span className="text-lg font-semibold text-gray-900 dark:text-white">
                 shen<span className="text-emerald-500">do</span>
               </span>
-              {usuario?.nombre_restaurante && (
-                <span className="text-xs text-gray-400 ml-1.5">· {usuario.nombre_restaurante}</span>
-              )}
+              <span className="text-xs text-gray-400 ml-1.5">· panel</span>
             </div>
-            <button
+            
+            <button 
               onClick={() => setIsDark(!isDark)}
               className="ml-2 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-300"
+              title="Cambiar tema"
             >
               {isDark ? "🌙" : "☀️"}
             </button>
           </div>
+
           <StoreToggle isOpen={isOpen} onToggle={() => setIsOpen((v) => !v)} />
         </header>
 
@@ -138,13 +102,14 @@ export default function Dashboard() { //Esto sirve para mostrar el dashboard del
 
         <main className="flex-1 p-4 overflow-y-auto">
           {tab === "orders" ? (
-            loadingOrders
-              ? <div className="text-center py-10 text-gray-400">Cargando pedidos...</div>
-              : <OrdersView orders={orders} onAccept={acceptOrder} onReject={rejectOrder} onAdvance={advanceOrder} />
+            <OrdersView 
+              orders={orders} 
+              onAccept={acceptOrder} 
+              onReject={rejectOrder} 
+              onAdvance={advanceOrder} 
+            />
           ) : (
-            loadingProducts
-              ? <div className="text-center py-10 text-gray-400">Cargando productos...</div>
-              : <ProductsView products={products} onAddProduct={addProduct} />
+            <ProductsView products={products} onAddProduct={addProduct} />
           )}
         </main>
 
